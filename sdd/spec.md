@@ -6,7 +6,7 @@
 
 ## Claim
 
-Este projeto prova que: transacoes distribuidas com compensacao.
+transacoes distribuidas com compensacao.
 
 ## Stack
 
@@ -14,7 +14,7 @@ java21, spring-boot, postgresql, docker
 
 ## User-visible output
 
-- Docker command: pending
+- Docker command: `docker run --rm saga-orchestrator`
 - README opens with: # #16 saga-orchestrator
 - Benchmark table: consistency_rate
 
@@ -33,9 +33,14 @@ Out:
 
 ## Architecture
 
-`	xt
-client -> app -> domain -> adapters -> benchmark output
-`
+```
+SagaApplication (Spring Boot)
+  -> SagaOrchestrator (domain)
+    -> SagaStep implementations (steps layer)
+      -> InMemorySagaLog (application)
+  -> BenchmarkRunner (CLI on startup)
+    -> ConsistencyResult (JSON output)
+```
 
 ## Benchmark
 
@@ -43,21 +48,21 @@ Primary metric:
 
 - name: consistency_rate
 - target: first reproducible baseline
-- command: pending
-- result file: enchmarks/results/*.json
+- command: `docker run --rm saga-orchestrator`
+- result file: `benchmarks/results/*.json`
 
 ## Dataset or fixture
 
-- source: pending
-- size: pending
-- license: pending
+- source: deterministic pseudo-random (java.util.Random)
+- size: 100 iterations (configurable)
+- license: Apache 2.0 (project code)
 - deterministic seed: 42
 
 ## Definition of done
 
-- [ ] Docker command works from clean clone.
-- [ ] README starts with project number and benchmark result.
-- [ ] Benchmark command writes JSON result.
-- [ ] Tests cover core behavior.
-- [ ] REFERENCES.md explains reuse.
-- [ ] No secret or paid credential required for default demo.
+- [x] Docker command works from clean clone.
+- [x] README starts with project number and benchmark result.
+- [x] Benchmark command writes JSON result.
+- [x] Tests cover core behavior.
+- [x] REFERENCES.md explains reuse.
+- [x] No secret or paid credential required for default demo.

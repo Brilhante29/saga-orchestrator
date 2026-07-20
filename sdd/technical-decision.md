@@ -2,119 +2,104 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ## Decision Type
 
-`<stack|api-style|cloud|messaging|database|library|runtime|framework>`
+stack, framework, library, runtime
 
 ## Context
 
-Project: `<project-name>`
-Problem: `<problem to solve>`
-Portfolio program: `<program>`
-Public signal: `<GitHub/LinkedIn proficiency signal>`
-Benchmark: `<metric>`
+Project: `saga-orchestrator`
+Problem: demostrar transacoes distribuidas com compensacao via saga pattern
+Portfolio program: `backend-reliability-platform`
+Public signal: Java/Spring distributed transaction knowledge
+Benchmark: `consistency_rate`
 
 ## Selected Option
 
-Selected: `<option>`
+Selected: `Spring Boot 3.4 + Java 21 + Gradle 8.10 + Jackson 2.18`
 
 Reason:
 
-`<Why this option fits the problem, benchmark, and public signal.>`
+Spring Boot provides REST API and dependency injection scaffolding with minimal boilerplate. Java 21 records cleanly model `LogEntry` and result types. Gradle with version catalog provides clean dependency management. Jackson handles JSON benchmark output without additional libraries.
 
 ## Decision Brain Fields
 
-- Stack profile: `<spring-kotlin-backend|fastapi-backend|go-backend|node-typescript-backend|angular|nextjs|python-ml|terraform>`
-- API style: `<rest-http|graphql|grpc|websocket|sse|cli>`
-- Messaging: `<none|outbox-only|rabbitmq|kafka|redis-streams|nats>`
-- Cloud mode: `<none|kumo-local-first|adapter-fake|real-cloud-required>`
-- Database/runtime: `<selection>`
-- Library policy: `<selection>`
+- Stack profile: `spring-kotlin-backend`
+- API style: `rest-http`
+- Messaging: `none`
+- Cloud mode: `none`
+- Database/runtime: `docker`
+- Library policy: minimal dependencies — spring-boot-starter-web, jackson-databind, junit-jupiter
 
 ## Engineering Principles
 
 Coupling boundary:
 
-`<Domain/use cases must not depend on framework, DB, broker, cloud SDK, transport, or UI.>`
+Domain/use cases must not depend on framework, DB, broker, cloud SDK, transport, or UI.
 
 SOLID application:
 
-- SRP: `<how responsibilities are split>`
-- OCP: `<how behavior extends without rewriting stable policy>`
-- LSP: `<how adapters/fakes/reals stay substitutable>`
-- ISP: `<small ports/interfaces used>`
-- DIP: `<high-level policy depends on abstractions>`
+- SRP: each domain class has one responsibility (Saga = aggregate, SagaOrchestrator = execution, SagaLog = audit)
+- OCP: new step types implement SagaStep without modifying orchestrator
+- LSP: SagaStep implementations are substitutable (ReserveInventoryStep, ProcessPaymentStep, ShipOrderStep)
+- ISP: SagaLog is a 4-method interface; SagaStep is a 3-method interface
+- DIP: SagaOrchestrator depends on SagaStep and SagaLog abstractions, not concrete implementations
 
 Simplicity:
 
-- KISS: `<simplest design that proves the claim>`
-- YAGNI: `<future abstraction intentionally not added>`
-- DRY: `<duplicated business knowledge removed without premature abstraction>`
+- KISS: synchronous loop with try/catch for compensation — simplest proof of the pattern
+- YAGNI: no database, no message broker, no async, no Kubernetes
+- DRY: step pattern expressed via shared SagaStep interface; no repeated compensation logic
 
 Testability evidence:
 
-- `<use case test without transport/infrastructure>`
-- `<adapter or contract test>`
+- `SagaOrchestratorTest` — pure Java test, no Spring, verifies execution order and compensation
+- `BenchmarkRunnerTest` — deterministic seed ensures reproducible metrics
+
 ## Rejected Options
 
 | Option | Why rejected |
 |---|---|
-| `<option>` | `<reason>` |
-| `<option>` | `<reason>` |
+| Kotlin | Java 21 records suffice; Kotlin adds compile-time overhead |
+| Kafka/RabbitMQ | Unnecessary for single-node synchronous saga |
+| PostgreSQL for saga log | Adds Docker Compose dependency; in-memory log is sufficient for benchmark |
+| JPA / Hibernate | No database needed for in-memory benchmark |
 
 ## API Contract
 
 Contract artifact:
 
-`<OpenAPI|GraphQL schema|protobuf|event contract|CLI output schema|none>`
-
-GraphQL controls, when applicable:
-
-- Query complexity/depth limit: `<yes|no|not applicable>`
-- N+1 prevention: `<DataLoader/batching plan|not applicable>`
-- Field-level auth rule: `<yes|no|not applicable>`
+`POST /api/saga/order` — creates an order saga with optional step failure flags
+`GET /api/saga/health` — health check
 
 ## Cloud Local-First
 
-Local provider:
+Local provider: `docker`
 
-`<kumo|none|adapter fake>`
-
-Real provider target:
-
-`<aws|none|other>`
+Real provider target: `none`
 
 Config switch:
-
-```txt
-CLOUD_PROVIDER=<kumo|aws|none>
-CLOUD_ENDPOINT=http://localhost:4566
 ```
-
-Unsupported local behaviors:
-
-- `<behavior or none>`
+none
+```
 
 ## Benchmark Impact
 
-Expected impact:
-
-- `<metric/result this decision should improve or clarify>`
+Expected impact: consistency_rate = 1.0 (all sagas either complete or compensate cleanly when compensation is no-op)
 
 Validation command:
-
-```powershell
-<command>
+```
+docker run --rm saga-orchestrator
 ```
 
 ## Operational Cost
 
-- Docker services added: `<none|kumo|postgres|redis|rabbitmq|redpanda|...>`
-- Local demo complexity: `<low|medium|high>`
-- Failure case required: `<yes|no>`
+- Docker services added: none
+- Local demo complexity: low
+- Failure case required: yes (step failure triggers compensation)
 
 ## Follow-up
 
-- `<what must be revisited if benchmark fails>`
+If benchmark shows consistency_rate < 1.0, investigate SagaOrchestrator compensation logic for unhandled exceptions.

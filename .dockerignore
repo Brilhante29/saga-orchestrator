@@ -1,0 +1,16 @@
+.
+.git
+.gitignore
+.gitattributes
+**/.gitkeep
+benchmarks/
+tools/
+.aitmpl/
+.claude/
+.codex/
+.portfolio/
+.portfolio-control/
+openspec/
+sdd/
+*.md
+LICENSE

@@ -1,24 +1,28 @@
 id: 16
 name: saga-orchestrator
 program:
-  id: <ai-evaluation-retrieval|applied-computer-vision|backend-reliability-platform|mlops-data-platform|delivery-observability-infra>
-  narrative_fit: <how this repo strengthens the program story>
-  shared_assets:
-    - <program-level reusable asset>
-status: scaffold
+  id: backend-reliability-platform
+  narrative_fit: demonstra transacoes distribuidas com compensacao via saga pattern
+  shared_assets: []
+status: benchmarked
 claim: transacoes distribuidas com compensacao
-stack: []
+stack:
+  - java21
+  - spring-boot
+  - postgresql
+  - docker
+  - gradle
 language_profile:
-  primary: <python|java|go|typescript|angular|nextjs|terraform|spring-kotlin-backend|fastapi-backend|go-backend|node-typescript-backend>
+  primary: spring-kotlin-backend
   secondary: []
-  reason: <why this profile governs the repo>
+  reason: Java/Spring Boot is the primary backend stack for demonstrating saga orchestration with compensation patterns
 decision_brain:
   agentic_spec:
     source: .portfolio/decision-brain/agentic-spec-governance.yaml
     spec_store: portfolio-reuse-kit
     schema: portfolio-system
     project_config: openspec/config.yaml
-    component_pack: <default-portfolio-project|ai-evaluation-retrieval|applied-computer-vision|backend-reliability-platform|mlops-data-platform|delivery-observability-infra>
+    component_pack: default-portfolio-project
     artifact_graph:
       - intent->portfolio-impact->architecture-record
       - architecture-record+portfolio-impact->component-pack
@@ -27,53 +31,67 @@ decision_brain:
     mode: principal-agent-orchestrated
     source: .portfolio/decision-brain/agent-graph.yaml
     handoff: sdd/agent-handoff.md
-    local_first_runtime: docker+kumo-when-cloud-behavior-is-needed
+    local_first_runtime: docker
   reuse_improvement_loop:
     source: .portfolio/decision-brain/reuse-improvement-loop.yaml
     review_path: sdd/reuse-improvement-review.md
-    current_status: pending
+    current_status: completed
   principles:
-    coupling_rule: <domain/use cases do not depend on framework, database, broker, cloud SDK, transport, or UI>
-    solid: [srp, ocp, lsp, isp, dip]
-    simplicity_rule: <KISS/YAGNI rule for this repo>
-    testability_rule: <how use cases run without transport/infrastructure>
+    coupling_rule: domain does not depend on framework, database, broker, cloud SDK, transport, or UI
+    solid:
+      - srp
+      - ocp
+      - lsp
+      - isp
+      - dip
+    simplicity_rule: minimal implementation that proves distributed transactions with compensation
+    testability_rule: saga orchestrator tested without Spring context via pure domain POJOs
     rejected_overengineering:
-      - <pattern/tool/abstraction rejected>
-  stack_profile: <spring-kotlin-backend|fastapi-backend|go-backend|node-typescript-backend|angular|nextjs|python-ml|terraform>
-  api_style: <rest-http|graphql|grpc|websocket|sse|cli>
-  messaging: <none|outbox-only|rabbitmq|kafka|redis-streams|nats>
+      - message broker (Kafka/RabbitMQ) not needed for single-node saga proof
+      - distributed database not needed for in-memory benchmark
+      - container orchestration (Kubernetes) not needed for single-container demo
+  stack_profile: spring-kotlin-backend
+  api_style: rest-http
+  messaging: none
   cloud:
-    mode: <none|kumo-local-first|adapter-fake|real-cloud-required>
-    local_provider: kumo
-    real_provider_target: <aws|none|other>
+    mode: none
+    local_provider: docker
+    real_provider_target: none
     emulated_services: []
-    adapter_rule: <ports/adapters keep cloud SDK outside domain/use cases>
-    config_switch: CLOUD_PROVIDER=kumo|aws
+    adapter_rule: ports/adapters keep cloud SDK outside domain/use cases
+    config_switch: none
     unsupported_behaviors: []
-  database: <postgresql|sqlite|redis|qdrant|duckdb|none|other>
-  runtime: <runtime decision>
-  library_policy: <why selected libs fit the problem and benchmark>
+  database: postgresql
+  runtime: docker
+  library_policy: Spring Boot 3.4 for REST support, pure Java for domain logic, Jackson for JSON output
   record_path: sdd/technical-decision.md
   rejected_options:
-    - option: <alternative stack/broker/api/cloud/library>
-      reason: <why it was not chosen>
+    - option: spring-kotlin-backend with Kotlin
+      reason: Java is sufficient; Kotlin adds compilation overhead without benefit for this benchmark
+    - option: Kafka/RabbitMQ for async saga
+      reason: synchronous saga is simpler and proves compensation pattern equally well
 architecture:
-  style: <mvc|layered|modular-monolith|clean-architecture|hexagonal|cqrs-event-sourcing|event-driven|mvvm|pipeline|serverless|microservices>
-  reason: <why this problem and benchmark fit this architecture>
+  style: layered
+  reason: Saga orchestration maps naturally to domain/application/infrastructure layers; domain has zero framework dependency
   problem_forces:
-    domain_complexity: <low|medium|high>
-    integration_pressure: <low|medium|high>
-    ui_state_complexity: <none|low|medium|high>
-    data_or_ml_reproducibility: <low|medium|high>
-    auditability: <low|medium|high>
-    throughput_or_async: <low|medium|high>
-    independent_deployability: <low|medium|high>
-  dependency_rule: <dependency direction rule>
+    domain_complexity: medium
+    integration_pressure: low
+    ui_state_complexity: none
+    data_or_ml_reproducibility: low
+    auditability: medium
+    throughput_or_async: low
+    independent_deployability: low
+  dependency_rule: domain does not import application or infrastructure; application depends on domain
   boundaries:
-    - <module/layer/context boundary>
+    - domain: saga core entities, interfaces, orchestrator
+    - application: REST controller, in-memory saga log
+    - steps: step implementations with simulated success/failure
+    - benchmark: runner and result schema
   rejected_alternatives:
-    - style: <alternative>
-      reason: <why it was not chosen>
+    - style: event-driven
+      reason: adds message broker complexity without improving compensation proof
+    - style: hexagonal
+      reason: overengineering for a single-benchmark project
 design_system:
   tokens: design-system/tokens.yaml
   readme_components:
@@ -103,10 +121,10 @@ reuse:
 benchmark:
   primary_metric: consistency_rate
   unit: unit
-  command: pending
+  command: docker run --rm saga-orchestrator
   result_path: benchmarks/results/*.json
 release:
-  docker: pending
+  docker: done
   no_secret_default_path: true
   readme_has_number: true
   references_documented: true

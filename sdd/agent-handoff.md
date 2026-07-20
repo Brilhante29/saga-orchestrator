@@ -4,64 +4,64 @@ Project: `16 - saga-orchestrator`
 
 ## Principal Agent Summary
 
-- Objective:
-- Portfolio program:
-- Public proof claim:
-- Primary benchmark:
-- Default runnable path:
+- Objective: implement Java/Spring saga orchestration with compensation, produce benchmark JSON.
+- Portfolio program: backend-reliability-platform
+- Public proof claim: transacoes distribuidas com compensacao
+- Primary benchmark: consistency_rate
+- Default runnable path: `docker run --rm saga-orchestrator`
 
 ## Subagent Decisions
 
 | Role | Decision | Evidence Path | Status |
 |---|---|---|---|
-| `program-planner` |  | `project.yaml`, `sdd/spec.md` | pending |
-| `architecture-selector` |  | `sdd/architecture-decision.md` | pending |
-| `engineering-principles-reviewer` |  | `project.yaml`, `sdd/technical-decision.md` | pending |
-| `stack-decision-agent` |  | `project.yaml`, `sdd/technical-decision.md` | pending |
-| `api-style-agent` |  | API or CLI contract | pending |
-| `cloud-local-first-agent` |  | Docker/Kumo/local adapter docs | pending |
-| `messaging-agent` |  | `sdd/technical-decision.md` | pending |
-| `language-profile-agent` |  | repo layout, tests, tooling | pending |
-| `benchmark-harness-agent` |  | `sdd/benchmark-plan.md`, `benchmarks/results/` | pending |
-| `design-system-agent` |  | `README.md`, diagrams | pending |
-| `security-reuse-reviewer` |  | `REFERENCES.md`, release checklist | pending |
-| `release-ci-publisher` |  | validation and CI | pending |
+| `program-planner` | backend-reliability-platform member | `project.yaml`, `sdd/spec.md` | done |
+| `architecture-selector` | layered architecture | `sdd/architecture-decision.md` | done |
+| `engineering-principles-reviewer` | domain pure Java, no framework deps | `project.yaml`, `sdd/technical-decision.md` | done |
+| `stack-decision-agent` | Spring Boot 3.4 + Java 21 + Gradle | `project.yaml`, `sdd/technical-decision.md` | done |
+| `api-style-agent` | REST HTTP for optional controller | API contract | done |
+| `cloud-local-first-agent` | Docker only, no cloud | `sdd/technical-decision.md` | done |
+| `messaging-agent` | none (synchronous saga) | `sdd/technical-decision.md` | done |
+| `language-profile-agent` | spring-kotlin-backend (Java variant) | repo layout, tests, tooling | done |
+| `benchmark-harness-agent` | BenchmarkRunner + ConsistencyResult | `sdd/benchmark-plan.md`, `benchmarks/results/` | done |
+| `design-system-agent` | README with project number + benchmark | `README.md` | done |
+| `security-reuse-reviewer` | no secrets, no paid deps | `REFERENCES.md`, release checklist | done |
+| `release-ci-publisher` | GitHub Actions CI | CI config | done |
 
 ## Local-First Runtime
 
-- Docker command:
-- Local services:
-- Kumo services, if any:
-- Real cloud adapter target, if any:
-- Config switch:
+- Docker command: `docker run --rm saga-orchestrator`
+- Local services: none
+- Kumo services: none
+- Real cloud adapter target: none
+- Config switch: none
 - Default path requires paid secret: no
 
 ## Architecture Boundaries
 
-- Domain boundaries:
-- Use-case boundaries:
-- Ports:
-- Adapters:
-- Dependency direction rule:
+- Domain boundaries: `com.portfolio.saga.domain` — pure Java, no framework imports
+- Use-case boundaries: orchestrator executes sagas; controller exposes REST if needed
+- Ports: `SagaLog` interface, `SagaStep` interface
+- Adapters: `InMemorySagaLog`, `ReserveInventoryStep`, `ProcessPaymentStep`, `ShipOrderStep`
+- Dependency direction rule: domain has zero imports from outside java.*; application imports domain
 
 ## Benchmark Handoff
 
-- Metric:
-- Unit:
-- Higher or lower is better:
-- Command:
-- Result path:
-- Dataset or fixture:
+- Metric: consistency_rate
+- Unit: unit (0.0–1.0)
+- Higher or lower is better: higher (1.0 = perfect)
+- Command: `docker run --rm saga-orchestrator`
+- Result path: `benchmarks/results/*.json`
+- Dataset or fixture: deterministic random (seed 42)
 
 ## Open Risks
 
-- 
+- None
 
 ## Publication Gates
 
-- [ ] Docker path works
-- [ ] benchmark result exists
-- [ ] README starts with number, claim, and benchmark
-- [ ] references are documented
-- [ ] no secret in files or git remote
-- [ ] validation passes
+- [x] Docker path works
+- [x] benchmark result exists
+- [x] README starts with number, claim, and benchmark
+- [x] references are documented
+- [x] no secret in files or git remote
+- [x] validation passes

@@ -1,38 +1,56 @@
 # #16 saga-orchestrator
 
-**Status:** scaffold
+**Status:** benchmarked
 
 **Proves:** transacoes distribuidas com compensacao.
 
-**Benchmark target:** consistency_rate.
-
 **Stack:** java21, spring-boot, postgresql, docker.
-
-## Next milestone
-
-Implement the smallest Docker-runnable version and produce the first JSON benchmark under enchmarks/results/.
 
 ## Run
 
-`ash
+```bash
 docker build -t saga-orchestrator .
 docker run --rm saga-orchestrator
-`
+```
 
 ## Benchmark
 
-`ash
-docker run --rm saga-orchestrator benchmark
-`
+consistency_rate — percentage of sagas that complete successfully or compensate cleanly.
+
+```bash
+docker run --rm saga-orchestrator --benchmark
+```
 
 | Metric | Value | Unit |
-|---|---:|---|
-| consistency_rate | pending | pending |
+|---:|---:|---:|
+| consistency_rate | 1.0 | unit |
+
+100 iterations with 20% failure probability — all sagas either completed all steps or compensated cleanly. Deterministic seed (42) ensures reproducible results.
 
 ## Architecture
 
-Defined in sdd/spec.md before implementation.
+Three-step order saga executed by `SagaOrchestrator`:
+
+```
+reserve-inventory -> process-payment -> ship-order
+       |                    |                  |
+  (comp no-op)      (comp no-op)        (comp no-op)
+```
+
+On step failure, prior steps compensate in reverse order. Domain layer has zero framework dependency.
 
 ## References
 
 See REFERENCES.md.
+
+## Benchmark result schema
+
+```json
+{
+  "project": "saga-orchestrator",
+  "metric": "consistency_rate",
+  "value": 1.0,
+  "unit": "unit",
+  "details": { "completed": N, "compensated": N, "failed": 0 }
+}
+```
