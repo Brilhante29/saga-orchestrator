@@ -4,7 +4,7 @@ program:
   id: backend-reliability-platform
   narrative_fit: demonstra transacoes distribuidas com compensacao via saga pattern
   shared_assets: []
-status: published
+status: implemented
 claim: transacoes distribuidas com compensacao
 stack:
   - java21
