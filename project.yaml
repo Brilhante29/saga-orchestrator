@@ -122,7 +122,7 @@ benchmark:
   primary_metric: consistency_rate
   unit: unit
   command: docker run --rm saga-orchestrator
-  result_path: benchmarks/results/*.json
+  result_path: benchmarks/results/consistency_rate.json
 release:
   docker: done
   no_secret_default_path: true
