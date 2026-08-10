@@ -1,78 +1,36 @@
-# Architecture Decision
+# Architecture Decision: hexagonal synchronous saga
 
 ## Status
 
-Accepted
+Accepted.
 
 ## Context
 
-Project: `saga-orchestrator`
-Claim: `transacoes distribuidas com compensacao`
-Benchmark: `consistency_rate`
-
-Problem forces:
-
-- Domain complexity: `medium` — saga orchestration with compensation requires ordered execution and rollback
-- Integration pressure: `low` — single JVM process, no external services
-- UI state complexity: `none` — CLI/benchmark only
-- Data/ML reproducibility: `low` — no ML, data is in-memory
-- Auditability/event history: `medium` — saga log tracks every transition
-- Throughput/async pressure: `low` — synchronous single-threaded demo
-- Independent deployability need: `low` — single Docker container
+The previous in-memory layered demo lost all saga state on restart, used no-op compensations and calculated consistency as a consequence of its control flow. The repository must prove a real failure-recovery property without adding infrastructure unrelated to that property.
 
 ## Decision
 
-Chosen architecture: `layered`
+Use a hexagonal architecture with a framework-free Kotlin state machine. `SagaOrchestrator` depends on two outbound port types:
 
-Reason:
+- `SagaStore` persists saga checkpoints and transition events;
+- `SagaStep` performs an idempotent resource operation and its idempotent compensation.
 
-Domain layer (`Saga`, `SagaOrchestrator`, `SagaStep`, `SagaLog`) has zero framework imports — pure Java POJOs. Application layer (`InMemorySagaLog`, `SagaController`) depends on domain and adds Spring/Jackson. This lets the orchestrator be tested without Spring, meeting the "domain does not depend on framework" principle.
+PostgreSQL adapters implement all ports. Inventory, payment, shipment and saga checkpoints use separate transactions. There is no transaction wrapping the complete saga. A resource can therefore commit before the saga checkpoint, which is the recovery window under test.
 
-Dependency rule:
+## Messaging decision
 
-`domain -> (no deps)` — pure Java. `application -> domain + Spring Web`. `steps -> domain`. `benchmark -> domain + Jackson`.
+No Kafka, RabbitMQ or outbox is used. The orchestration is synchronous, and this repository measures state durability and compensation. A broker would introduce delivery, ordering and consumer semantics that belong to repositories #20 and #28. Transition events are persisted using `commerce-event-v1`, ready for a future publisher adapter.
 
-## Rejected Alternatives
+## Dependency rule
 
-| Alternative | Why rejected |
-|---|---|
-| Event-driven (message broker) | Adds Kafka/RabbitMQ without improving the compensation proof |
-| Hexagonal / Clean Architecture | Overengineering for a single-benchmark project; layers are sufficient |
-| Kotlin | Java 21 records and interfaces express the pattern just as well |
-
-## Folder Layout
-
-```
-src/main/java/com/portfolio/saga/
-  SagaApplication.java
-  domain/       (pure Java, no framework)
-  application/  (Spring REST + in-memory infra)
-  steps/        (step implementations)
-  benchmark/    (runner + result JSON)
-src/test/java/com/portfolio/saga/
-  domain/
-  benchmark/
+```text
+application adapters -> domain ports/state machine <- PostgreSQL adapters
 ```
 
-## Testing Strategy
-
-- Unit tests: saga orchestrator, saga log, order saga, compensation — all without Spring
-- Benchmark: `BenchmarkRunnerTest` verifies deterministic results, zero-failure edge case, full-failure edge case
+The domain has no Spring, JDBC, HTTP, database, broker or cloud import. Controllers contain no business transition logic.
 
 ## Consequences
 
-Positive:
+Positive: restart recovery is real, effects are inspectable, adapters are substitutable, and compensation failure cannot be hidden.
 
-- Domain is testable in isolation, no Spring context needed
-- Simple layered structure is easy to understand and benchmark
-- Compensation pattern is clearly visible in orchestrator
-
-Tradeoffs:
-
-- In-memory only (no PostgreSQL persistence for saga log)
-- Synchronous execution (no parallel step execution)
-
-Migration path:
-
-- Replace `InMemorySagaLog` with JDBC/Spring Data PostgreSQL adapter
-- Add async step execution with `CompletableFuture` if throughput becomes relevant
+Tradeoff: all logical resources share one PostgreSQL server in the local demo. This does not reproduce network partitions or independent service databases and is documented as such.

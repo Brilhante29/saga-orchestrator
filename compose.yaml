@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:17.6-alpine
+    environment:
+      POSTGRES_DB: saga
+      POSTGRES_USER: saga
+      POSTGRES_PASSWORD: saga
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U saga -d saga"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+    ports:
+      - "${POSTGRES_PORT:-55433}:5432"
+    volumes:
+      - saga-postgres:/var/lib/postgresql/data
+
+  app:
+    build: .
+    image: saga-orchestrator:local
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/saga
+      DB_USER: saga
+      DB_PASSWORD: saga
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+
+  benchmark:
+    build: .
+    image: saga-orchestrator:local
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/saga
+      DB_USER: saga
+      DB_PASSWORD: saga
+      BENCHMARK_RESULT_PATH: /app/benchmarks/results/saga-reliability-v2.json
+      SOURCE_COMMIT: ${SOURCE_COMMIT:-0000000000000000000000000000000000000000}
+      SOURCE_TREE_CLEAN: ${SOURCE_TREE_CLEAN:-true}
+      IMAGE_DIGEST: ${IMAGE_DIGEST:-sha256:0000000000000000000000000000000000000000000000000000000000000000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["--benchmark", "--spring.main.web-application-type=none"]
+    volumes:
+      - ./benchmarks/results:/app/benchmarks/results
+    profiles: ["tools"]
+
+volumes:
+  saga-postgres:

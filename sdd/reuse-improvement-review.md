@@ -2,37 +2,30 @@
 
 Project: `16 - saga-orchestrator`
 
-## Review Points
+## Review points
 
-- [x] after scaffold
-- [x] after architecture decision
-- [x] after first working slice
-- [x] after benchmark result
-- [x] before publication
-- [ ] after CI failure, if applicable
+- [x] after architecture selection
+- [x] after PostgreSQL implementation
+- [x] after failure tests
+- [x] after benchmark harness
+- [x] before release validation
 
 ## Findings
 
-| Finding | Classification | Kit Area | Action | Status |
+| Finding | Classification | Kit area | Action | Status |
 |---|---|---|---|---|
-| Java 21 records are ideal for `LogEntry` and result DTOs — cleaner than Lombok | `patch_now` | `language-profiles/java` | Add note to java profile about record usage | backlog |
-| Gradle version catalog works for single-project, but portfolio-reuse-kit has no Gradle catalog template | `backlog` | `templates` | Consider adding Gradle `.toml` catalog template | backlog |
-| In-memory saga log is sufficient for benchmark — no database needed | `reject` | `docs/quality-gates` | Database requirement is project-specific, not kit-wide | reject |
+| Reliability repos need a gate that rejects claims backed only by in-memory adapters | `backlog` | benchmark harness | require at least one failure integration test for durable claims | recorded |
+| V2 evidence needs an explicit producer for dependency and image digests | `backlog` | evidence harness | add a reusable provenance collector script | recorded |
+| Sagas require `FAILED` when compensation fails | `backlog` | architecture skills | add compensation-failure invariant to saga guidance | recorded |
+| Broker selection must follow the measured problem | `patch_now` | messaging decision | document the no-broker decision and future publisher boundary locally | completed |
+| JDBC step SQL is project-specific | `reject` | component packs | keep resource operation/compensation code in this repo | rejected |
 
-## Patch Now Decisions
+## Reuse delta
 
-- java profile updated with note about Java 21 records for DTOs
+The repository exposes three kit improvements but does not edit the kit from this isolated worktree. They are recorded for the macro-level reuse pass. The local validator now rejects tracked `.gradle` caches and non-V2 benchmark evidence, preventing both repeated defects here.
 
-## Backlog Decisions
-
-- Gradle version catalog template for portfolio projects
-
-## Rejected Improvements
-
-- PostgreSQL persistence requirement not moved to kit-level quality gate
-
-## Final Gate
+## Final gate
 
 - [x] Reusable improvements were patched or recorded.
 - [x] Project-specific implementation was not moved into the kit.
-- [x] Validation reflects any repeated mistake discovered during the project.
+- [x] Validation reflects tracked Gradle caches and stale benchmark evidence.

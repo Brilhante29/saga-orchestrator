@@ -1,21 +1,28 @@
+manifest_version: 2
 id: 16
 name: saga-orchestrator
 program:
   id: backend-reliability-platform
-  narrative_fit: demonstra transacoes distribuidas com compensacao via saga pattern
-  shared_assets: []
+  narrative_fit: durable orchestration and compensation between the payment, order, outbox and cache portfolio repositories
+  shared_assets:
+    - contracts/commerce-event-v1.schema.json
 status: benchmarked
-claim: transacoes distribuidas com compensacao
+claim: durable synchronous saga recovery with idempotent PostgreSQL operations and compensations
 stack:
-  - java21
-  - spring-boot
-  - postgresql
-  - docker
-  - gradle
+  - kotlin-2.1
+  - java-21
+  - spring-boot-3.4
+  - spring-webmvc
+  - spring-jdbc
+  - postgresql-17.6
+  - flyway
+  - testcontainers
+  - gradle-8.10.2
+  - docker-compose
 language_profile:
   primary: spring-kotlin-backend
   secondary: []
-  reason: Java/Spring Boot is the primary backend stack for demonstrating saga orchestration with compensation patterns
+  reason: Kotlin makes state transitions explicit while Spring JDBC keeps transaction boundaries visible
 decision_brain:
   agentic_spec:
     source: .portfolio/decision-brain/agentic-spec-governance.yaml
@@ -31,100 +38,84 @@ decision_brain:
     mode: principal-agent-orchestrated
     source: .portfolio/decision-brain/agent-graph.yaml
     handoff: sdd/agent-handoff.md
-    local_first_runtime: docker
+    local_first_runtime: docker-compose
   reuse_improvement_loop:
     source: .portfolio/decision-brain/reuse-improvement-loop.yaml
     review_path: sdd/reuse-improvement-review.md
     current_status: completed
   principles:
-    coupling_rule: domain does not depend on framework, database, broker, cloud SDK, transport, or UI
-    solid:
-      - srp
-      - ocp
-      - lsp
-      - isp
-      - dip
-    simplicity_rule: minimal implementation that proves distributed transactions with compensation
-    testability_rule: saga orchestrator tested without Spring context via pure domain POJOs
+    coupling_rule: domain depends only on SagaStore and SagaStep ports
+    solid: [srp, ocp, lsp, isp, dip]
+    simplicity_rule: synchronous orchestration; no broker and no two-phase commit
+    testability_rule: the same orchestrator runs with in-memory test doubles and PostgreSQL adapters
     rejected_overengineering:
-      - message broker (Kafka/RabbitMQ) not needed for single-node saga proof
-      - distributed database not needed for in-memory benchmark
-      - container orchestration (Kubernetes) not needed for single-container demo
+      - Kafka or RabbitMQ without an asynchronous delivery claim
+      - WebFlux over blocking JDBC
+      - ORM for explicit state-transition SQL
   stack_profile: spring-kotlin-backend
   api_style: rest-http
   messaging: none
   cloud:
     mode: none
-    local_provider: docker
-    real_provider_target: none
+    local_provider: docker-compose
+    real_provider_target: managed-postgresql
     emulated_services: []
-    adapter_rule: ports/adapters keep cloud SDK outside domain/use cases
-    config_switch: none
-    unsupported_behaviors: []
+    adapter_rule: database implementation remains behind SagaStore and SagaStep ports
+    config_switch: DB_URL
+    unsupported_behaviors:
+      - multi-region failover
   database: postgresql
   runtime: docker
-  library_policy: Spring Boot 3.4 for REST support, pure Java for domain logic, Jackson for JSON output
+  library_policy: Spring JDBC and Flyway expose transaction and migration behavior without ORM indirection
   record_path: sdd/technical-decision.md
   rejected_options:
-    - option: spring-kotlin-backend with Kotlin
-      reason: Java is sufficient; Kotlin adds compilation overhead without benefit for this benchmark
-    - option: Kafka/RabbitMQ for async saga
-      reason: synchronous saga is simpler and proves compensation pattern equally well
+    - option: Java-only core
+      reason: Kotlin exhaustive enum handling improves the state-machine implementation
+    - option: Kafka or RabbitMQ
+      reason: the selected synchronous orchestration does not require message delivery
+    - option: JPA
+      reason: explicit SQL makes idempotency and locking inspectable
 architecture:
-  style: layered
-  reason: Saga orchestration maps naturally to domain/application/infrastructure layers; domain has zero framework dependency
+  style: hexagonal
+  reason: orchestration depends on small persistence and step ports with PostgreSQL at the edge
   problem_forces:
-    domain_complexity: medium
-    integration_pressure: low
+    domain_complexity: high
+    integration_pressure: medium
     ui_state_complexity: none
-    data_or_ml_reproducibility: low
-    auditability: medium
+    data_or_ml_reproducibility: none
+    auditability: high
     throughput_or_async: low
     independent_deployability: low
-  dependency_rule: domain does not import application or infrastructure; application depends on domain
+  dependency_rule: adapters depend inward on framework-free Kotlin domain contracts
   boundaries:
-    - domain: saga core entities, interfaces, orchestrator
-    - application: REST controller, in-memory saga log
-    - steps: step implementations with simulated success/failure
-    - benchmark: runner and result schema
+    - domain: saga state, ports, failure plan and orchestrator
+    - application: REST adapter and benchmark command
+    - infrastructure: JDBC saga store and idempotent order-step adapters
+    - contracts: versioned commerce event envelope
   rejected_alternatives:
     - style: event-driven
-      reason: adds message broker complexity without improving compensation proof
-    - style: hexagonal
-      reason: overengineering for a single-benchmark project
+      reason: broker delivery is outside the synchronous recovery claim
+    - style: layered-with-in-memory-state
+      reason: process restart would erase the evidence
 design_system:
-  tokens: design-system/tokens.yaml
-  readme_components:
-    - readme_header
-    - benchmark_card
-    - architecture_card
-    - references_table
+  tokens: .portfolio/design-system/tokens.yaml
+  readme_components: [readme_header, benchmark_card, architecture_card, references_table]
   diagram_required: true
 reuse:
   kit_version: local
-  uses:
-    - catalog
-    - programs
-    - proficiency-map
-    - component-packs
-    - openspec-schema
-    - decision-brain
-    - agent-graph
-    - reuse-improvement-loop
-    - architecture
-    - language-profiles
-    - design-system
-    - sdd
-    - harness
-    - templates
-    - skills
+  uses: [catalog, programs, openspec-schema, decision-brain, agent-graph, architecture, language-profiles, sdd, harness, skills]
 benchmark:
+  schema_version: 2
+  benchmark_id: durable-failure-matrix
   primary_metric: consistency_rate
-  unit: unit
-  command: docker run --rm saga-orchestrator
-  result_path: benchmarks/results/consistency_rate.json
+  secondary_metric: uncompensated_sagas
+  unit: ratio
+  repetitions: 3
+  command: docker compose --profile tools run --rm --build benchmark
+  result_path: benchmarks/results/saga-reliability-v2.json
 release:
   docker: done
   no_secret_default_path: true
   readme_has_number: true
   references_documented: true
+  broker_claim: none

@@ -2,66 +2,38 @@
 
 Project: `16 - saga-orchestrator`
 
-## Principal Agent Summary
+## Current state
 
-- Objective: implement Java/Spring saga orchestration with compensation, produce benchmark JSON.
-- Portfolio program: backend-reliability-platform
-- Public proof claim: transacoes distribuidas com compensacao
-- Primary benchmark: consistency_rate
-- Default runnable path: `docker run --rm saga-orchestrator`
+- Branch: `codex/backend-reliability-close`
+- Runtime: Kotlin/JVM 21 + Spring Boot + PostgreSQL 17.6
+- Architecture: hexagonal synchronous saga
+- Default command: `docker compose up --build`
+- Benchmark: `docker compose --profile tools run --rm --build benchmark`
+- Result: `benchmarks/results/saga-reliability-v2.json`
 
-## Subagent Decisions
+## Observable decisions
 
-| Role | Decision | Evidence Path | Status |
-|---|---|---|---|
-| `program-planner` | backend-reliability-platform member | `project.yaml`, `sdd/spec.md` | done |
-| `architecture-selector` | layered architecture | `sdd/architecture-decision.md` | done |
-| `engineering-principles-reviewer` | domain pure Java, no framework deps | `project.yaml`, `sdd/technical-decision.md` | done |
-| `stack-decision-agent` | Spring Boot 3.4 + Java 21 + Gradle | `project.yaml`, `sdd/technical-decision.md` | done |
-| `api-style-agent` | REST HTTP for optional controller | API contract | done |
-| `cloud-local-first-agent` | Docker only, no cloud | `sdd/technical-decision.md` | done |
-| `messaging-agent` | none (synchronous saga) | `sdd/technical-decision.md` | done |
-| `language-profile-agent` | spring-kotlin-backend (Java variant) | repo layout, tests, tooling | done |
-| `benchmark-harness-agent` | BenchmarkRunner + ConsistencyResult | `sdd/benchmark-plan.md`, `benchmarks/results/` | done |
-| `design-system-agent` | README with project number + benchmark | `README.md` | done |
-| `security-reuse-reviewer` | no secrets, no paid deps | `REFERENCES.md`, release checklist | done |
-| `release-ci-publisher` | GitHub Actions CI | CI config | done |
+| Area | Decision | Evidence |
+|---|---|---|
+| Domain | `SagaOrchestrator` is framework-free | `src/main/kotlin/com/portfolio/saga/domain/` |
+| Durability | saga state, transitions and resource effects persist in PostgreSQL | Flyway V1 migration and JDBC adapters |
+| Failure semantics | failed compensation persists `FAILED`; recovery resumes its index | domain and PostgreSQL integration tests |
+| Idempotency | `order_id` and operation keys are unique; replay uses `ON CONFLICT` | migration and `JdbcOrderSteps.kt` |
+| Messaging | none; synchronous orchestration is the measured problem | architecture decision |
+| Contract | transition envelope is `commerce-event-v1` | `contracts/commerce-event-v1.schema.json` |
 
-## Local-First Runtime
+## Verification performed
 
-- Docker command: `docker run --rm saga-orchestrator`
-- Local services: none
-- Kumo services: none
-- Real cloud adapter target: none
-- Config switch: none
-- Default path requires paid secret: no
+- Domain tests cover every forward-step failure, compensation failure and crash replay.
+- PostgreSQL tests cover durable restart, one-row idempotency and compensation recovery with a new orchestrator instance.
+- CI must run tests, validator, image build, Compose benchmark and schema validation.
 
-## Architecture Boundaries
+## Continuation order
 
-- Domain boundaries: `com.portfolio.saga.domain` — pure Java, no framework imports
-- Use-case boundaries: orchestrator executes sagas; controller exposes REST if needed
-- Ports: `SagaLog` interface, `SagaStep` interface
-- Adapters: `InMemorySagaLog`, `ReserveInventoryStep`, `ProcessPaymentStep`, `ShipOrderStep`
-- Dependency direction rule: domain has zero imports from outside java.*; application imports domain
+1. Read `AGENTS.md`, `project.yaml` and this file.
+2. Run `git status --short`; do not touch `C:\tmp\saga-kotlin`.
+3. Run tests and validator before changing public numbers.
+4. Regenerate benchmark evidence after implementation changes.
+5. Record reusable kit improvements in `sdd/reuse-improvement-review.md`.
 
-## Benchmark Handoff
-
-- Metric: consistency_rate
-- Unit: unit (0.0–1.0)
-- Higher or lower is better: higher (1.0 = perfect)
-- Command: `docker run --rm saga-orchestrator`
-- Result path: `benchmarks/results/*.json`
-- Dataset or fixture: deterministic random (seed 42)
-
-## Open Risks
-
-- None
-
-## Publication Gates
-
-- [x] Docker path works
-- [x] benchmark result exists
-- [x] README starts with number, claim, and benchmark
-- [x] references are documented
-- [x] no secret in files or git remote
-- [x] validation passes
+No internal reasoning transcript is required; decisions, evidence and remaining actions above are sufficient to continue safely.

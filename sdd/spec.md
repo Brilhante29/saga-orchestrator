@@ -1,68 +1,31 @@
-# Spec: saga-orchestrator
+# Spec: durable PostgreSQL order saga
 
-## Number
+## Public contract
 
-#16
+- Project: `#16 saga-orchestrator`
+- Claim: durable synchronous saga recovery with idempotent PostgreSQL operations and compensations
+- Primary metric: `consistency_rate`
+- Guardrail metric: `uncompensated_sagas`
 
-## Claim
+## Required behavior
 
-transacoes distribuidas com compensacao.
+1. Starting the same `orderId` more than once returns the same saga and does not duplicate a resource effect.
+2. Inventory, payment and shipment commit separately; successful prior steps compensate in reverse order after a later failure.
+3. Every saga checkpoint and transition survives process restart.
+4. A crash after a resource commit but before its checkpoint is recovered by idempotent replay.
+5. Compensation failure persists `FAILED`; recovery retries the recorded compensation index and never reports `COMPENSATED` early.
 
-## Stack
+## Scope boundary
 
-java21, spring-boot, postgresql, docker
+In scope: one synchronous Spring process, PostgreSQL persistence, REST control plane, Docker Compose, failure injection and benchmark V2.
 
-## User-visible output
-
-- Docker command: `docker run --rm saga-orchestrator`
-- README opens with: # #16 saga-orchestrator
-- Benchmark table: consistency_rate
-
-## Scope
-
-In:
-
-- Implementar o menor produto funcional que prove o claim.
-- Rodar por Docker.
-- Gerar benchmark JSON reproduzivel.
-
-Out:
-
-- Publicar repo antes do primeiro resultado numerico.
-- Depender de segredo pago para o caminho default.
-
-## Architecture
-
-```
-SagaApplication (Spring Boot)
-  -> SagaOrchestrator (domain)
-    -> SagaStep implementations (steps layer)
-      -> InMemorySagaLog (application)
-  -> BenchmarkRunner (CLI on startup)
-    -> ConsistencyResult (JSON output)
-```
-
-## Benchmark
-
-Primary metric:
-
-- name: consistency_rate
-- target: first reproducible baseline
-- command: `docker run --rm saga-orchestrator`
-- result file: `benchmarks/results/*.json`
-
-## Dataset or fixture
-
-- source: deterministic pseudo-random (java.util.Random)
-- size: 100 iterations (configurable)
-- license: Apache 2.0 (project code)
-- deterministic seed: 42
+Out of scope: broker delivery, network partitions between microservices, two-phase commit, Kubernetes and cloud-specific SDKs.
 
 ## Definition of done
 
-- [x] Docker command works from clean clone.
-- [x] README starts with project number and benchmark result.
-- [x] Benchmark command writes JSON result.
-- [x] Tests cover core behavior.
-- [x] REFERENCES.md explains reuse.
-- [x] No secret or paid credential required for default demo.
+- [x] Framework-free Kotlin domain depends on `SagaStore` and `SagaStep` ports.
+- [x] Flyway owns durable schema and indexes.
+- [x] PostgreSQL integration tests cover idempotency, restart and failed compensation recovery.
+- [x] Compose runs without paid credentials.
+- [x] Failure matrix emits a schema-v2 JSON with 3 repetitions.
+- [x] README states limitations and opens with the measured number.

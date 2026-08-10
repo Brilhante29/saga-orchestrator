@@ -4,3 +4,18 @@ server:
 spring:
   application:
     name: saga-orchestrator
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/saga}
+    username: ${DB_USER:saga}
+    password: ${DB_PASSWORD:saga}
+  flyway:
+    enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+benchmark:
+  result-path: ${BENCHMARK_RESULT_PATH:benchmarks/results/saga-reliability-v2.json}

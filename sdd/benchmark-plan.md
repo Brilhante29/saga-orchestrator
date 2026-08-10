@@ -1,65 +1,39 @@
-# Benchmark Plan: saga-orchestrator
+# Benchmark Plan: durable failure matrix
 
 ## Hypothesis
 
-transacoes distribuidas com compensacao, measured by consistency_rate.
+After injected step failures, compensation failures and process interruptions, every measured saga reaches `COMPLETED` or `COMPENSATED` after recovery, leaving zero uncompensated sagas.
 
 ## Command
 
 ```bash
-docker run --rm saga-orchestrator
+docker compose --profile tools run --rm --build benchmark
 ```
 
-## Environment
+## Workload
 
-- OS: Alpine Linux (Docker container)
-- CPU: host-dependent
-- RAM: host-dependent
-- GPU: N/A
-- Docker version: 24+
-- Date: recorded in result JSON
+Each repetition runs nine scenarios: success; failure at inventory, payment and shipment; failure at inventory and payment compensation; and crash after inventory, payment and shipment commit. Compensation failures and crashes are followed by a recovery pass without injection.
 
-## Inputs
-
-- fixture: deterministic pseudo-random (java.util.Random)
-- dataset size: 100 iterations
-- repetitions: 1 run per execution
-- warmup: none
+- warm-up: 3 successful sagas
+- repetitions: 3
+- measured scenarios: 27
+- concurrency: 1, because ordering/recovery rather than throughput is the claim
+- database: PostgreSQL 17.6 container
 
 ## Metrics
 
-| Metric | Unit | Source | Why it matters |
-|---|---:|---|---|
-| consistency_rate | unit | BenchmarkRunner.run() | proves the repo claim — all sagas reach a consistent state |
+| Metric | Formula | Target |
+|---|---|---:|
+| `consistency_rate` | terminal consistent sagas / measured sagas | 1.0 |
+| `uncompensated_sagas` | sagas still `FAILED` after recovery | 0 |
+| `recovered_sagas` | injected crashes or compensation failures recovered per repetition | 5 |
 
-## Result schema
+Only `COMPLETED` and `COMPENSATED` are consistent. A failed compensation is counted as failed until a later recovery actually commits the remaining compensations.
 
-Output must be JSON and include project, metric, value, unit, timestamp, environment, and command.
+## Evidence format
 
-```json
-{
-  "project": "saga-orchestrator",
-  "metric": "consistency_rate",
-  "value": 1.0,
-  "unit": "unit",
-  "timestamp": "2026-07-20T17:30:00Z",
-  "environment": {
-    "java_version": "21",
-    "os": "Linux",
-    "available_processors": "N"
-  },
-  "command": "java -jar saga-orchestrator.jar benchmark",
-  "details": {
-    "iterations": 100,
-    "failure_probability": 0.2,
-    "seed": 42,
-    "completed": 80,
-    "compensated": 20,
-    "failed": 0
-  }
-}
-```
+`benchmarks/results/saga-reliability-v2.json` must validate against `.portfolio/contracts/benchmark-result-v2.schema.json` and include fixture/config digests, three samples per metric, execution metadata, dependency-lock digest, image identity and source commit.
 
-## Post angle
+## Limitations
 
-#16 saga-orchestrator: consistency_rate as a reproducible portfolio benchmark.
+The workload is deterministic and single-threaded. It proves correctness under defined crash windows; it does not claim throughput, network partition tolerance or broker delivery.

@@ -2,11 +2,13 @@
 
 | Reference | License | Used for | Copied code? |
 |---|---|---|---|
-| Spring Boot 3.4 | Apache 2.0 | REST controller, dependency injection, application bootstrap | no |
-| JUnit 5 | EPL 2.0 | Unit testing | no |
-| Gradle 8.10 | Apache 2.0 | Build system, dependency management | no |
-| Jackson 2.18 | Apache 2.0 | JSON serialization for benchmark results | no |
-| Saga Pattern (C García-Molina & Salem, 1987) | academic | Core saga orchestrator design, compensation semantics | no |
-| eclipse-temurin:21-jre-alpine | GPL 2.0 | Docker runtime image | no |
+| Spring Boot 3.4 | Apache-2.0 | MVC bootstrap, JDBC and health endpoint | no |
+| Kotlin 2.1 | Apache-2.0 | Domain state machine and exhaustive enum handling | no |
+| PostgreSQL 17 | PostgreSQL | Durable saga, transition and resource tables | no |
+| Flyway | Apache-2.0 | Versioned database migration | no |
+| Testcontainers | MIT | PostgreSQL integration tests | no |
+| Jackson | Apache-2.0 | API and benchmark JSON serialization | no |
+| Gradle 8.10.2 | Apache-2.0 | Reproducible build and dependency locking | no |
+| Garcia-Molina and Salem, *Sagas* (1987) | academic reference | Saga and compensating transaction semantics | no |
 
-Implementation, fixtures, benchmark scripts and reported results are project-specific.
+The implementation, failure fixture, event contract and benchmark harness are project-specific. No reference implementation was copied.

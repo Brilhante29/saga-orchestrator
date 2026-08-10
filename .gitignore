@@ -2,7 +2,10 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .venv/
-benchmarks/results/*.json
+.gradle/
+.kotlin/
+.idea/
+*.iml
 dist/
 target/
 build/

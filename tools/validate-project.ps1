@@ -38,6 +38,13 @@ $requiredFiles = @(
   "project.yaml",
   "REFERENCES.md",
   "AGENTS.md",
+  "compose.yaml",
+  "gradle.lockfile",
+  "settings-gradle.lockfile",
+  "tools/validate-json-schema.py",
+  "contracts/commerce-event-v1.schema.json",
+  "src/main/resources/db/migration/V1__durable_saga.sql",
+  "benchmarks/results/saga-reliability-v2.json",
   "sdd/spec.md",
   "sdd/benchmark-plan.md",
   "sdd/architecture-decision.md",
@@ -46,6 +53,13 @@ $requiredFiles = @(
   "sdd/reuse-improvement-review.md"
 )
 foreach ($file in $requiredFiles) { Require-File $file }
+
+$trackedGradleCache = @(git -C $root ls-files -- .gradle)
+if ($LASTEXITCODE -ne 0) {
+  Add-Failure "git could not inspect tracked Gradle caches"
+} elseif ($trackedGradleCache.Count -gt 0) {
+  Add-Failure "Generated .gradle cache files are tracked"
+}
 
 $reuseReviewPath = Join-Path $root "sdd/reuse-improvement-review.md"
 if (Test-Path -LiteralPath $reuseReviewPath -PathType Leaf) {
@@ -81,6 +95,19 @@ Push-Location -LiteralPath $root
 try {
   foreach ($file in $benchmarkFiles) {
     Invoke-Checked "benchmark JSON validation: $($file.Name)" { python -m json.tool $file.FullName | Out-Null }
+  }
+
+  $v2Result = Join-Path $root "benchmarks/results/saga-reliability-v2.json"
+  $v2Schema = Join-Path $root ".portfolio/contracts/benchmark-result-v2.schema.json"
+  if ((Test-Path -LiteralPath $v2Result) -and (Test-Path -LiteralPath $v2Schema)) {
+    Invoke-Checked "benchmark v2 schema validation" {
+      python (Join-Path $root "tools/validate-json-schema.py") $v2Schema $v2Result
+    }
+  }
+
+  $eventContract = Join-Path $root "contracts/commerce-event-v1.schema.json"
+  if (Test-Path -LiteralPath $eventContract) {
+    Invoke-Checked "commerce event contract JSON" { python -m json.tool $eventContract | Out-Null }
   }
 
   if (Test-Path -LiteralPath (Join-Path $root "src") -PathType Container) {

@@ -1,105 +1,38 @@
 # Technical Decision
 
-## Status
+## Selected stack
 
-Accepted
+Kotlin 2.1, JVM 21, Spring Boot 3.4 MVC, Spring JDBC, PostgreSQL 17.6, Flyway, Testcontainers, Gradle 8.10.2 and Docker Compose.
 
-## Decision Type
+## Why Kotlin
 
-stack, framework, library, runtime
+The repository owns a state machine. Kotlin enums, non-null types and exhaustive `when` expressions make missing states visible at compile time. This is a functional improvement over the Java-only simulator, not a cosmetic migration. Java and Kotlin compile to JVM 21; no Kotlin-only type crosses a published Java API.
 
-## Context
+## Why JDBC
 
-Project: `saga-orchestrator`
-Problem: demostrar transacoes distribuidas com compensacao via saga pattern
-Portfolio program: `backend-reliability-platform`
-Public signal: Java/Spring distributed transaction knowledge
-Benchmark: `consistency_rate`
+Explicit SQL keeps these proof obligations visible:
 
-## Selected Option
+- unique `order_id` and idempotency keys;
+- one transition sequence per saga;
+- partial indexes for recoverable states;
+- transaction boundaries around individual mutations;
+- `ON CONFLICT DO NOTHING` for replay.
 
-Selected: `Spring Boot 3.4 + Java 21 + Gradle 8.10 + Jackson 2.18`
+JPA was rejected because entity lifecycle behavior would obscure the SQL central to the benchmark. WebFlux was rejected because PostgreSQL access is blocking.
 
-Reason:
+## SOLID and simplicity
 
-Spring Boot provides REST API and dependency injection scaffolding with minimal boilerplate. Java 21 records cleanly model `LogEntry` and result types. Gradle with version catalog provides clean dependency management. Jackson handles JSON benchmark output without additional libraries.
+- SRP: orchestrator chooses transitions; store persists them; each step owns one resource.
+- OCP/LSP: new resource adapters implement `SagaStep` and obey the same execute/compensate idempotency contract.
+- ISP: ports contain only operations required by orchestration.
+- DIP: domain code depends on ports, never PostgreSQL or Spring.
+- KISS/YAGNI: synchronous calls, one process, one database and no broker.
+- DRY: failure and recovery policy lives once in `SagaOrchestrator`; SQL resource behavior is shared by the JDBC step base class.
 
-## Decision Brain Fields
+## Local-first and cloud
 
-- Stack profile: `spring-kotlin-backend`
-- API style: `rest-http`
-- Messaging: `none`
-- Cloud mode: `none`
-- Database/runtime: `docker`
-- Library policy: minimal dependencies — spring-boot-starter-web, jackson-databind, junit-jupiter
+`docker compose up --build` is the default. `DB_URL`, `DB_USER` and `DB_PASSWORD` are the only runtime switch needed for a managed PostgreSQL adapter target. Kumo is not used because no AWS API is part of this problem.
 
-## Engineering Principles
+## Security and operations
 
-Coupling boundary:
-
-Domain/use cases must not depend on framework, DB, broker, cloud SDK, transport, or UI.
-
-SOLID application:
-
-- SRP: each domain class has one responsibility (Saga = aggregate, SagaOrchestrator = execution, SagaLog = audit)
-- OCP: new step types implement SagaStep without modifying orchestrator
-- LSP: SagaStep implementations are substitutable (ReserveInventoryStep, ProcessPaymentStep, ShipOrderStep)
-- ISP: SagaLog is a 4-method interface; SagaStep is a 3-method interface
-- DIP: SagaOrchestrator depends on SagaStep and SagaLog abstractions, not concrete implementations
-
-Simplicity:
-
-- KISS: synchronous loop with try/catch for compensation — simplest proof of the pattern
-- YAGNI: no database, no message broker, no async, no Kubernetes
-- DRY: step pattern expressed via shared SagaStep interface; no repeated compensation logic
-
-Testability evidence:
-
-- `SagaOrchestratorTest` — pure Java test, no Spring, verifies execution order and compensation
-- `BenchmarkRunnerTest` — deterministic seed ensures reproducible metrics
-
-## Rejected Options
-
-| Option | Why rejected |
-|---|---|
-| Kotlin | Java 21 records suffice; Kotlin adds compile-time overhead |
-| Kafka/RabbitMQ | Unnecessary for single-node synchronous saga |
-| PostgreSQL for saga log | Adds Docker Compose dependency; in-memory log is sufficient for benchmark |
-| JPA / Hibernate | No database needed for in-memory benchmark |
-
-## API Contract
-
-Contract artifact:
-
-`POST /api/saga/order` — creates an order saga with optional step failure flags
-`GET /api/saga/health` — health check
-
-## Cloud Local-First
-
-Local provider: `docker`
-
-Real provider target: `none`
-
-Config switch:
-```
-none
-```
-
-## Benchmark Impact
-
-Expected impact: consistency_rate = 1.0 (all sagas either complete or compensate cleanly when compensation is no-op)
-
-Validation command:
-```
-docker run --rm saga-orchestrator
-```
-
-## Operational Cost
-
-- Docker services added: none
-- Local demo complexity: low
-- Failure case required: yes (step failure triggers compensation)
-
-## Follow-up
-
-If benchmark shows consistency_rate < 1.0, investigate SagaOrchestrator compensation logic for unhandled exceptions.
+The default credentials are local-only. No secret is committed for a real provider. Actuator exposes health only. Dependency versions are locked, Flyway controls schema changes and the runtime image contains only the application jar plus the lockfile used for benchmark provenance.
