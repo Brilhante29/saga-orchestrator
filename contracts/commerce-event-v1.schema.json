@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://portfolio.local/contracts/commerce-event-v1.schema.json",
-  "title": "Commerce event envelope v1",
+  "title": "Backend Reliability Platform commerce event v1",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -17,12 +17,12 @@
   ],
   "properties": {
     "eventId": { "type": "string", "format": "uuid" },
-    "eventType": { "type": "string", "pattern": "^saga\\.[A-Z_]+$" },
-    "eventVersion": { "const": 1 },
-    "aggregateId": { "type": "string", "minLength": 1 },
-    "sagaId": { "type": "string", "format": "uuid" },
-    "correlationId": { "type": "string", "format": "uuid" },
-    "causationId": { "type": "string", "format": "uuid" },
+    "eventType": { "type": "string", "minLength": 1 },
+    "eventVersion": { "type": "integer", "minimum": 1 },
+    "aggregateId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "sagaId": { "type": ["string", "null"], "maxLength": 128 },
+    "correlationId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "causationId": { "type": ["string", "null"], "maxLength": 128 },
     "occurredAt": { "type": "string", "format": "date-time" },
     "payload": { "type": "object" }
   }
