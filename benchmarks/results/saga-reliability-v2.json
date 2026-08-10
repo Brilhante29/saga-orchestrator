@@ -1,0 +1,69 @@
+{
+  "schema_version" : 2,
+  "run_id" : "885bbb8e-5757-43f7-b299-ebfcf2e7f446",
+  "project" : "saga-orchestrator",
+  "benchmark_id" : "durable-failure-matrix",
+  "workload" : {
+    "version" : "2.0.0",
+    "fixture_digest" : "sha256:49c93355a82594f070e4aa3b47b2692d6a4509ef75f04190f20f27a63126797f",
+    "config_digest" : "sha256:b4ccce798b832ec239356e3118bb10408f12f37d8ebcff9b60717bbc22bc6146",
+    "warmup_iterations" : 3,
+    "measured_iterations" : 27,
+    "concurrency" : 1
+  },
+  "metrics" : [ {
+    "name" : "consistency_rate",
+    "value" : 1.0,
+    "unit" : "ratio",
+    "direction" : "higher_is_better",
+    "samples" : [ 1.0, 1.0, 1.0 ],
+    "failures" : 0,
+    "summary" : {
+      "scenario_count_per_repeat" : 9,
+      "repetitions" : 3
+    }
+  }, {
+    "name" : "uncompensated_sagas",
+    "value" : 0.0,
+    "unit" : "count",
+    "direction" : "lower_is_better",
+    "samples" : [ 0.0, 0.0, 0.0 ],
+    "failures" : 0,
+    "summary" : {
+      "measured_after_recovery" : true
+    }
+  }, {
+    "name" : "recovered_sagas",
+    "value" : 5.0,
+    "unit" : "count",
+    "direction" : "higher_is_better",
+    "samples" : [ 5.0, 5.0, 5.0 ],
+    "failures" : 0,
+    "summary" : {
+      "includes_crashes_and_compensation_failures" : true
+    }
+  } ],
+  "execution" : {
+    "command" : "docker compose --profile tools run --rm benchmark",
+    "started_at" : "2026-08-10T05:28:39.210722790Z",
+    "duration_seconds" : 2.168,
+    "exit_code" : 0,
+    "repeat" : 3
+  },
+  "environment" : {
+    "runtime" : "Java 21.0.11 / Kotlin / Spring Boot",
+    "architecture" : "amd64",
+    "hardware_class" : "local-docker-cpu",
+    "database" : "PostgreSQL"
+  },
+  "provenance" : {
+    "source_commit" : "845daf7b111c9e4cbf3ec1bdd394ddbc6b6eb7a7",
+    "clean_tree" : true,
+    "image_ref" : "saga-orchestrator:local",
+    "image_digest" : "sha256:12a872d4e5379ba5ee1a9a5f3b7c4d435c42f60ba69efef9668256407ece70e5",
+    "dependency_lock_digest" : "sha256:a37a21286be0ff76ca8003699418c040afe0e8a0face14de56b5930f90b0c8d9",
+    "producer" : "local",
+    "artifact_digest" : "sha256:d0bd413262e5b56e87faf3a5077e27c7dd2ad73d9b16dcfe072a865010faad8b"
+  },
+  "comparability_key" : "saga-orchestrator:postgresql:failure-matrix:v2"
+}
