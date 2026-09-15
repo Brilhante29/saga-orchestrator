@@ -1,0 +1,26 @@
+{
+  "disposition": "documented",
+  "fixable": 37,
+  "fixable_packages": {
+    "com.fasterxml.jackson.core:jackson-core": 1,
+    "com.fasterxml.jackson.core:jackson-databind": 2,
+    "io.micrometer:micrometer-core": 1,
+    "libcrypto3": 1,
+    "libexpat": 2,
+    "libssl3": 1,
+    "openssl": 1,
+    "org.apache.tomcat.embed:tomcat-embed-core": 19,
+    "org.postgresql:postgresql": 3,
+    "org.springframework.boot:spring-boot": 2,
+    "org.springframework:spring-core": 1,
+    "org.springframework:spring-expression": 1,
+    "org.springframework:spring-webmvc": 2
+  },
+  "generated_at": "2026-09-15T19:30:57.367851Z",
+  "high_critical_total": 37,
+  "image": "saga-orchestrator:sec",
+  "no_upstream_fix": 0,
+  "rationale": "Base images are pinned by digest so benchmark provenance stays comparable. Rebuilding does not clear these advisories: the current upstream digest carries the same set. Applying apt-get upgrade would make the image non-deterministic and change image_digest between builds of the same commit, breaking the V2 comparability contract.",
+  "repository": "saga-orchestrator",
+  "sbom_packages": 123
+}
